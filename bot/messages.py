@@ -45,10 +45,35 @@ class BaseMessages(abc.ABC):
     def schedule_start(self):
         raise NotImplemented
 
+    @abc.abstractmethod
+    def schedule_updated(self):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def consult_start(self):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def consult_success(self):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def choose_slot(self):
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def link_sent_successful(self, text):
+        raise NotImplemented
+
 
 class RegularUser(BaseMessages):
     def start(self) -> str:
-        return 'Привет!'
+        return 'Важно. Вся информация в боте взята из официальных источников.\n' \
+               'Что можно сделать в боте?\n\n' \
+               '- Узнать кадастровую стоимость по кадастровому номеру\n' \
+               '- Узнать информацию про объект по адресу\n' \
+               '- Узнать как снизить кадастровую стоимость самостоятельно\n' \
+               '- Записаться на консультацию по снижению кадастровой стоимости'
 
     def help(self) -> str:
         return 'Вам нужно приобрести подписку'
@@ -92,16 +117,23 @@ class RegularUser(BaseMessages):
                '(например, если вы указали время с 8 утра до 12 дня' \
                ' записаться к вам на консультацию можно будет на 8, 9, 10 или 11 часов.)'
 
+    def schedule_updated(self):
+        return 'Ваше расписание обновлено'
 
-class PremiumUser(RegularUser):
-    def start(self) -> str:
-        return 'Здравствуйте!'
+    def consult_start(self):
+        return 'Выберите время, на которое Вы хотите записаться.'
 
-    def help(self) -> str:
-        return 'Наш менеджер скоро свяжется с вами!'
+    def consult_success(self):
+        return 'Вы успешно записались на консультацию. Скоро с Вами свяжутся наши менеджеры.'
+
+    def choose_slot(self):
+        return 'В выпадающей клавиатуре представлено время, в которое записались клиенты.' \
+               ' Чтобы отправить ссылку на видео-созвон нажмите на интересующее вас время ' \
+               'и введите текст-приглашение с ссылкой(этот текст увидит клиент)'
+
+    def link_sent_successful(self, text):
+        return 'Пользователю успешно отправился текст:\n\n' + text
 
 
 def get_messages(user: tg.User) -> BaseMessages:
-    if not user.is_premium:
-        return PremiumUser()
     return RegularUser()

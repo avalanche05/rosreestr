@@ -20,7 +20,7 @@ class Slot(SqlAlchemyBase):
     link = sqlalchemy.Column(sqlalchemy.String, default='Ссылки ещё нет.')
 
     def get_datetime(self) -> datetime.datetime:
-        return datetime.datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S.%f")
+        return datetime.datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S")
 
     def check_on_time(self):
-        return datetime.datetime.now() >= (self.get_datetime() + datetime.timedelta(hours=1))
+        return self.get_datetime() >= datetime.datetime.now()

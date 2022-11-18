@@ -1,11 +1,14 @@
+from copy import copy
+
 import data.requests
+import data.users
+import utils.user
 from data import db_session
 from data import requests
-from utils import user
 
 
 def create_request(tg_id: int, address: str) -> None:
-    if not user.check_paid(tg_id):
+    if not utils.user.check_paid(tg_id):
         raise PermissionError('Слишком много неоплаченных заказов')
 
     db_sess = db_session.create_session()
@@ -18,7 +21,7 @@ def create_request(tg_id: int, address: str) -> None:
     db_sess.commit()
     db_sess.close()
 
-    user.increment_unpaid(tg_id)
+    utils.user.increment_unpaid(tg_id)
 
 
 def get_actual_list_markup() -> list:
@@ -44,8 +47,9 @@ def get_actual_list() -> list:
 
 
 def manage_requests(address: str, info: str) -> list:
+    """возвращает все незакрытые запросы с адресом address"""
     db_sess = db_session.create_session()
-    user_ids = []
+    result = []
     rqsts = db_sess.query(data.requests.Request).filter_by(address=address, is_managed=False).all()
 
     if requests is None:
@@ -57,8 +61,35 @@ def manage_requests(address: str, info: str) -> list:
         r.is_managed = True
         r.is_found = True
 
-        user_ids.append(r.tg_id)
+        result.append(copy(r))
 
     db_sess.commit()
     db_sess.close()
-    return user_ids
+    return result
+
+
+def get_user_requests_id(user_id):
+    db_sess = db_session.create_session()
+    rqsts = db_sess.query(data.requests.Request).filter_by(tg_id=user_id,
+                                                           is_managed=True,
+                                                           is_found=True,
+                                                           is_paid=False).all()
+    result = list(map(lambda x: x.id, rqsts))
+    db_sess.close()
+    return result
+
+
+def close_request_get_info(request_id) -> str:
+    db_sess = db_session.create_session()
+    r = db_sess.query(data.requests.Request).filter_by(id=request_id).first()
+    r.is_paid = True
+
+    user = db_sess.query(data.users.User).filter_by(tg_id=r.tg_id).first()
+    user.count_not_paid -= 1
+
+    result = r.result
+
+    db_sess.commit()
+    db_sess.close()
+
+    return result
