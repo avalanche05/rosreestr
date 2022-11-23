@@ -42,7 +42,8 @@ class StartHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> None:
         utils.user.register_user(update.message.from_user.id)
-        await update.message.reply_text(self.messages.start(), reply_markup=constant.MENU_MARKUP)
+        await update.message.reply_text(self.messages.start(), reply_markup=constant.MENU_MARKUP,
+                                        parse_mode='markdown')
 
 
 class HelpHandler(BaseHandler):
@@ -57,7 +58,7 @@ class CadastralStartHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         await update.message.reply_text(self.messages.cadastral_start(),
-                                        reply_markup=tg.ReplyKeyboardRemove())
+                                        reply_markup=tg.ReplyKeyboardRemove(), parse_mode='markdown')
         return constant.CADASTRAL_NUMBER
 
 
@@ -84,10 +85,18 @@ class CaptchaHandler(BaseHandler):
                                                       text=self.messages.wait(),
                                                       reply_markup=constant.MENU_MARKUP)
         captcha_decode = update.message.text
-        session.check_captcha(captcha_decode)
+        if not session.check_captcha(captcha_decode):
+            await update.message.reply_text("Попробуйте ввести каптчу ещё раз: ")
+            return constant.CAPTCHA_INSERT
         cadastral_number = context.user_data['cadastral_number']
-        info = session.get_info(cadastral_number)
-        await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP)
+        try:
+            info = session.get_info(cadastral_number)
+            await update.message.reply_text("Получилось! Вот информация о Вашем объекте:")
+            await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP)
+        except Exception:
+            await update.message
+                                            reply_markup=constant.MENU_MARKUP)
+
         return tg_ext.ConversationHandler.END
 
 
@@ -110,7 +119,7 @@ class AddressHandler(BaseHandler):
             return tg_ext.ConversationHandler.END
 
         await update.message.reply_text(self.messages.address(),
-                                        reply_markup=tg.ReplyKeyboardRemove())
+                                        reply_markup=tg.ReplyKeyboardRemove(), parse_mode="html")
         return constant.ADDRESS_INSERT
 
 
@@ -203,12 +212,9 @@ class InfoHandler(BaseHandler):
             for r in rqsts:
                 r: data.requests.Request
                 await context.bot.send_message(chat_id=r.tg_id,
-                                               text=f'Информация по адресу: "{chosen_address}" '
-                                                    f'найдена. Пожалуйста, оплатите запрос,'
-                                                    f' чтобы получить доступ к информации.',
+                                               text=f'Информация по адресу: "{chosen_address}" \n'
+                                                    f'{info}',
                                                reply_markup=constant.MENU_MARKUP)
-                payload = 'address_' + str(r.id)
-                await utils.payments.create_info_payment(r.tg_id, context, payload)
 
             await update.message.reply_text('Информация сохранена успешно.',
                                             reply_markup=constant.MENU_MARKUP)
@@ -418,8 +424,10 @@ class CadastralPriceHandler(BaseHandler):
     async def handle(
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
-        await update.message.reply_text('Информация скоро будет добавлена.',
-                                        reply_markup=constant.MENU_MARKUP)
+        await update.message.reply_text(
+            text="<a href='https://t.me/d_zhelnin/62'>Гайд как снизить кадастровую стоимость самостоятельно.</a>",
+            parse_mode="html",
+            reply_markup=constant.MENU_MARKUP)
         return tg_ext.ConversationHandler.END
 
 
