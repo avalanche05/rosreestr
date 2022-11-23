@@ -91,7 +91,6 @@ class CaptchaHandler(BaseHandler):
         cadastral_number = context.user_data['cadastral_number']
         try:
             info = session.get_info(cadastral_number)
-            await update.message.reply_text("Получилось! Вот информация о Вашем объекте:")
             await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP, parse_mode='markdown')
         except Exception:
             await update.message.reply_text("Введённый кадастровый номер неверный. Попробуйте ещё раз.",
@@ -462,10 +461,7 @@ class AdminHandler(BaseHandler):
         if update.message.from_user.id not in constant.ADMINS:
             return
         text = '/list - список необработанных запросов\n' \
-               '/process - обработать запросы\n' \
-               '/schedule - настроить расписание\n' \
-               '/calendar - посмотреть своё расписание\n' \
-               '/link - отправить ссылку на консультацию'
+               '/process - обработать запросы\n'
         await update.message.reply_text(text)
 
 

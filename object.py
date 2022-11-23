@@ -35,12 +35,12 @@ class Object:
         self.old_numbers = []
 
     def __str__(self) -> str:
-        res = 'Информация об объекте\n\n'
+        res = 'Получилось! Вот информация о Вашем объекте: \n\n'
         res += f'Вид объекта недвижимости: {self.object_type}\n'
         res += f'Кадастровый номер: {self.cadastral_number}\n'
 
         res += f'Адрес (местоположение): {self.address}\n'
-        res += f'Площадь, кв.м: {self.area}\n'
+        res += f'Площадь, кв.м: {self.area}\n\n'
         res += f'*Кадастровая стоимость (руб): {self.cadastral_cost}*\n'
 
         return res
