@@ -1,7 +1,6 @@
 import abc
 import typing
 import typing as tp
-
 import telegram as tg
 import telegram.ext as tg_ext
 
@@ -58,7 +57,7 @@ class CadastralStartHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         await update.message.reply_text(self.messages.cadastral_start(),
-                                        reply_markup=constant.MENU_MARKUP)
+                                        reply_markup=tg.ReplyKeyboardRemove())
         return constant.CADASTRAL_NUMBER
 
 
@@ -69,12 +68,10 @@ class CadastralNumberHandler(BaseHandler):
         context.user_data['cadastral_number'] = update.message.text
         sent_message = await context.bot.send_message(chat_id=update.message.chat_id,
                                                       text=self.messages.wait(),
-                                                      reply_markup=constant.MENU_MARKUP)
+                                                      reply_markup=tg.ReplyKeyboardRemove())
         session.get_captcha()
         print(context.user_data['cadastral_number'])
-        await context.bot.editMessageText(chat_id=update.message.chat_id,
-                                          message_id=sent_message.message_id,
-                                          text=self.messages.captcha_insert())
+        await update.message.reply_text(self.messages.captcha_insert())
         await update.message.reply_photo(photo=open('captcha.png', 'rb'))
         return constant.CAPTCHA_INSERT
 
@@ -90,9 +87,7 @@ class CaptchaHandler(BaseHandler):
         session.check_captcha(captcha_decode)
         cadastral_number = context.user_data['cadastral_number']
         info = session.get_info(cadastral_number)
-        await context.bot.editMessageText(chat_id=update.message.chat_id,
-                                          message_id=sent_message.message_id,
-                                          text=info)
+        await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP)
         return tg_ext.ConversationHandler.END
 
 
@@ -114,7 +109,8 @@ class AddressHandler(BaseHandler):
                                             reply_markup=constant.MENU_MARKUP)
             return tg_ext.ConversationHandler.END
 
-        await update.message.reply_text(self.messages.address(), reply_markup=constant.MENU_MARKUP)
+        await update.message.reply_text(self.messages.address(),
+                                        reply_markup=tg.ReplyKeyboardRemove())
         return constant.ADDRESS_INSERT
 
 
@@ -159,9 +155,16 @@ class ProcessHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         if update.message.from_user.id not in constant.ADMINS:
+            print('PROCESS NOT ADMIN')
             return tg_ext.ConversationHandler.END
 
         actual_list_markup = utils.request.get_actual_list_markup()
+
+        if not actual_list_markup:
+            await update.message.reply_text("Необработанных запросов нет.",
+                                            reply_markup=tg.ReplyKeyboardRemove())
+            return tg_ext.ConversationHandler.END
+        print('PROCESS:', actual_list_markup)
         await update.message.reply_text("Выберите адрес",
                                         reply_markup=tg.ReplyKeyboardMarkup(
                                             actual_list_markup,
@@ -178,13 +181,12 @@ class AddressChooseHandler(BaseHandler):
 
         if chosen_address not in utils.request.get_actual_list():
             await update.message.reply_text(
-                'Выбранного запроса не существует. Выберите адрес на выпадающей клавиатуре',
-                reply_markup=constant.MENU_MARKUP)
+                'Выбранного запроса не существует. Выберите адрес на выпадающей клавиатуре')
             return constant.ADDRESS_CHOOSE
 
         context.user_data['chosen_address'] = chosen_address
         await update.message.reply_text("Адрес выбран. Введите найденную информацию.",
-                                        reply_markup=constant.MENU_MARKUP)
+                                        reply_markup=tg.ReplyKeyboardRemove())
         return constant.INFO_INSERT
 
 
@@ -201,7 +203,7 @@ class InfoHandler(BaseHandler):
             for r in rqsts:
                 r: data.requests.Request
                 await context.bot.send_message(chat_id=r.tg_id,
-                                               text=f'Информация по адресу: "{chosen_address}"'
+                                               text=f'Информация по адресу: "{chosen_address}" '
                                                     f'найдена. Пожалуйста, оплатите запрос,'
                                                     f' чтобы получить доступ к информации.',
                                                reply_markup=constant.MENU_MARKUP)
@@ -226,7 +228,7 @@ class ScheduleStartHandler(BaseHandler):
         if update.message.from_user.id not in constant.ADMINS:
             return tg_ext.ConversationHandler.END
         await update.message.reply_text(self.messages.schedule_start(),
-                                        reply_markup=constant.MENU_MARKUP)
+                                        reply_markup=tg.ReplyKeyboardRemove())
         return constant.SCHEUlE_INSERT
 
 
@@ -251,6 +253,11 @@ class ConsultStartHandler(BaseHandler):
         markup = utils.slot.get_list_for_markup(times)
         context.user_data['times'] = times
         context.user_data['slot_ids'] = slot_ids
+
+        if not times:
+            await update.message.reply_text('Свободных дат нет. Пожалуйста, попробуйте позже.')
+            return tg_ext.ConversationHandler.END
+
         await update.message.reply_text(self.messages.consult_start(),
                                         reply_markup=tg.ReplyKeyboardMarkup(
                                             markup,
@@ -299,6 +306,8 @@ class CalendarHandler(BaseHandler):
         if update.message.from_user.id not in constant.ADMINS:
             return
         text = utils.slot.get_schedule_str()
+        if not text:
+            text = 'Расписание пустое.'
         await update.message.reply_text(text, reply_markup=constant.MENU_MARKUP)
 
 
@@ -311,6 +320,11 @@ class ManageStartHandler(BaseHandler):
         times, slots_id = utils.slot.get_booked_slots_list()
         context.user_data['times'] = times
         context.user_data['slots_id'] = slots_id
+
+        if not times:
+            await update.message.reply_text('Записей нет.')
+            return tg_ext.ConversationHandler.END
+
         markup = utils.slot.get_list_for_markup(times)
         await update.message.reply_text(self.messages.choose_slot(),
                                         reply_markup=tg.ReplyKeyboardMarkup(
@@ -403,9 +417,10 @@ class SuccessPayHandler(BaseHandler):
 class CadastralPriceHandler(BaseHandler):
     async def handle(
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    ) -> int:
         await update.message.reply_text('Информация скоро будет добавлена.',
                                         reply_markup=constant.MENU_MARKUP)
+        return tg_ext.ConversationHandler.END
 
 
 def link_conversation() -> tg_ext.ConversationHandler:
@@ -432,10 +447,26 @@ def link_conversation() -> tg_ext.ConversationHandler:
     return conversation_handler
 
 
+class AdminHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        if update.message.from_user.id not in constant.ADMINS:
+            return
+        text = '/list - список необработанных запросов\n' \
+               '/process - обработать запросы\n' \
+               '/schedule - настроить расписание\n' \
+               '/calendar - посмотреть своё расписание\n' \
+               '/link - отправить ссылку на консультацию'
+        await update.message.reply_text(text)
+
+
 def cadastral_conversation() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
-        entry_points=[tg_ext.StringRegexHandler(f"^{constant.MENU[0]}$", CadastralStartHandler())],
+        entry_points=[
+            tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[0]}$"),
+                                  CadastralStartHandler())],
 
         states={
 
@@ -459,7 +490,8 @@ def cadastral_conversation() -> tg_ext.ConversationHandler:
 def address_conversation() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
-        entry_points=[tg_ext.StringRegexHandler(f"^{constant.MENU[1]}$", AddressHandler())],
+        entry_points=[
+            tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[1]}$"), AddressHandler())],
 
         states={
 
@@ -520,14 +552,30 @@ def schedule_handler() -> tg_ext.ConversationHandler:
 def consult_handler() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
-        entry_points=[tg_ext.StringRegexHandler(f"^{constant.MENU[3]}$",
-                                                ConsultStartHandler())],
+        entry_points=[tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[3]}$"),
+                                            ConsultStartHandler())],
 
         states={
 
             constant.CONSULT_CHOOSE: [
                 tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
                                       ConsultChooseHandler())]
+
+        },
+
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+
+    )
+    return conversation_handler
+
+
+def low_cost_handler() -> tg_ext.ConversationHandler:
+    conversation_handler = tg_ext.ConversationHandler(
+
+        entry_points=[tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[2]}$"),
+                                            CadastralPriceHandler())],
+
+        states={
 
         },
 
@@ -550,7 +598,9 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
     application.add_handler(schedule_handler())
     application.add_handler(consult_handler())
     application.add_handler(link_conversation())
+    application.add_handler(low_cost_handler())
 
+    application.add_handler(tg_ext.CommandHandler('admin', AdminHandler()))
     application.add_handler(tg_ext.CommandHandler('id', IdHandler()))
     application.add_handler(tg_ext.CommandHandler('list', ActualListHandler()))
     application.add_handler(tg_ext.CommandHandler('calendar', CalendarHandler()))
@@ -558,11 +608,8 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
     application.add_handler(
         tg_ext.MessageHandler(tg_ext.filters.SUCCESSFUL_PAYMENT, SuccessPayHandler())
     )
-    application.add_handler(
-        tg_ext.RegexHandler(f"^{constant.MENU[3]}$", CadastralPriceHandler()))
     # application.add_handler(
     #     tg_ext.MessageHandler(
     #         tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND, EchoHandler()
     #     )
     # )
-
