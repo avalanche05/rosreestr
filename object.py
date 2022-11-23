@@ -35,42 +35,13 @@ class Object:
         self.old_numbers = []
 
     def __str__(self) -> str:
-        res = 'Общая информация\n\n'
+        res = 'Информация об объекте\n\n'
         res += f'Вид объекта недвижимости: {self.object_type}\n'
-        res += f'Статус объекта: {self.status}\n'
         res += f'Кадастровый номер: {self.cadastral_number}\n'
-        res += f'Дата присвоения кадастрового номера: {self.cadastral_date}\n'
 
-        res += '\nХарактеристики объекта\n\n'
         res += f'Адрес (местоположение): {self.address}\n'
         res += f'Площадь, кв.м: {self.area}\n'
-        if self.floor:
-            res += f'Этаж: {self.floor}\n'
-        if self.permitted_use:
-            res += f'Вид разрешенного использования: {self.permitted_use}\n'
-        if self.floor_cnt:
-            res += f'Количество этажей: {self.floor_cnt}\n'
-        if self.wall_material:
-            res += f'Материал наружных стен: {self.wall_material}\n'
-        if self.finish_build_year:
-            res += f'Год завершения строительства: {self.finish_build_year}\n'
-        if self.commissioning_year:
-            res += f'Год ввода в эксплуатацию: {self.commissioning_year}\n'
-
-        res += '\nСведения о кадастровой стоимости\n\n'
-        res += f'Кадастровая стоимость (руб): {self.cadastral_cost}\n'
-        res += f'Дата определения: {self.determination_date}\n'
-        res += f'Дата внесения: {self.registration_date}\n'
-
-        if self.old_numbers:
-            res += '\nРанее присвоенные номера\n\n'
-            res += ''.join(self.old_numbers)
-
-        res += '\nСведения о правах и ограничениях (обременениях)\n\n'
-        res += 'Вид, номер и дата государственной регистрации права:\n'
-        res += ''.join(self.rights)
-        res += 'Ограничение прав и обременение объекта недвижимости:\n'
-        res += ''.join(self.encumbrances)
+        res += f'*Кадастровая стоимость (руб): {self.cadastral_cost}*\n'
 
         return res
 
