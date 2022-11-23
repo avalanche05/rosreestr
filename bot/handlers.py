@@ -94,7 +94,7 @@ class CaptchaHandler(BaseHandler):
             await update.message.reply_text("Получилось! Вот информация о Вашем объекте:")
             await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP)
         except Exception:
-            await update.message
+            await update.message.reply_text("Введённый кадастровый номер неверный. Попробуйте ещё раз.",
                                             reply_markup=constant.MENU_MARKUP)
 
         return tg_ext.ConversationHandler.END
