@@ -92,7 +92,7 @@ class CaptchaHandler(BaseHandler):
         try:
             info = session.get_info(cadastral_number)
             await update.message.reply_text("Получилось! Вот информация о Вашем объекте:")
-            await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP)
+            await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP, parse_mode='markdown')
         except Exception:
             await update.message.reply_text("Введённый кадастровый номер неверный. Попробуйте ещё раз.",
                                             reply_markup=constant.MENU_MARKUP)
