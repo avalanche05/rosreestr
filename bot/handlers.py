@@ -211,8 +211,8 @@ class InfoHandler(BaseHandler):
             for r in rqsts:
                 r: data.requests.Request
                 await context.bot.send_message(chat_id=r.tg_id,
-                                               text=f'Информация по адресу: "{chosen_address}" \n'
-                                                    f'{info}',
+                                               text=f'Получилось! Мы нашли Ваш объект. ("{chosen_address})" \n'
+                                                    f'Кадастровая стоимость: {info}',
                                                reply_markup=constant.MENU_MARKUP)
 
             await update.message.reply_text('Информация сохранена успешно.',
