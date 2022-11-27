@@ -14,6 +14,7 @@ import utils.request
 import utils.info
 import utils.slot
 import utils.payments
+import utils.requests_saver
 
 session = None
 session: client.SearchSession
@@ -90,8 +91,9 @@ class CaptchaHandler(BaseHandler):
             return constant.CAPTCHA_INSERT
         cadastral_number = context.user_data['cadastral_number']
         try:
-            info = session.get_info(cadastral_number)
-            await update.message.reply_text(info, reply_markup=constant.MENU_MARKUP, parse_mode='markdown')
+            obj = session.get_info(cadastral_number)
+            utils.requests_saver.save_request(update.message.from_user, obj.address)
+            await update.message.reply_text(str(obj), reply_markup=constant.MENU_MARKUP, parse_mode='markdown')
         except Exception:
             await update.message.reply_text("Введённый кадастровый номер неверный. Попробуйте ещё раз.",
                                             reply_markup=constant.MENU_MARKUP)
@@ -129,6 +131,7 @@ class AddressGetHandler(BaseHandler):
         address = update.message.text
         tg_id = update.message.from_user.id
         utils.request.create_request(tg_id, address)
+        utils.requests_saver.save_request(update.message.from_user, address)
         await update.message.reply_text(self.messages.address_success(),
                                         reply_markup=constant.MENU_MARKUP)
         for admin_id in constant.ADMINS:
@@ -211,9 +214,10 @@ class InfoHandler(BaseHandler):
             for r in rqsts:
                 r: data.requests.Request
                 await context.bot.send_message(chat_id=r.tg_id,
-                                               text=f'Получилось! Мы нашли Ваш объект. ("{chosen_address})" \n'
-                                                    f'Кадастровая стоимость: {info}',
-                                               reply_markup=constant.MENU_MARKUP)
+                                               text=f'Получилось! Мы нашли Ваш объект - {chosen_address}. \n'
+                                                    f'*Кадастровая стоимость: {info}*',
+                                               reply_markup=constant.MENU_MARKUP,
+                                               parse_mode='markdown')
 
             await update.message.reply_text('Информация сохранена успешно.',
                                             reply_markup=constant.MENU_MARKUP)
@@ -430,6 +434,52 @@ class CadastralPriceHandler(BaseHandler):
         return tg_ext.ConversationHandler.END
 
 
+class StartWriteHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message.from_user.id not in constant.ADMINS:
+            return tg_ext.ConversationHandler.END
+        await update.message.reply_text('Введите id пользователя, которому от имени бота нужно отправить сообщение.')
+        return constant.ID_WRITE
+
+
+class IdWriteHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message.from_user.id not in constant.ADMINS:
+            return tg_ext.ConversationHandler.END
+        user_id = update.message.text
+        context.user_data['user_id'] = user_id
+        await update.message.reply_text('Теперь введите текст, который нужно отправить пользователю.')
+        return constant.TEXT_WRITE
+
+
+class TextWriteHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message.from_user.id not in constant.ADMINS:
+            return tg_ext.ConversationHandler.END
+        user_id = context.user_data['user_id']
+        message = update.message.text
+
+        await context.bot.send_message(chat_id=user_id, text='Сообщение от администратора:')
+        await context.bot.send_message(chat_id=user_id, text=message)
+        await update.message.reply_text('Сообщение успешно отправлено.')
+
+        return tg_ext.ConversationHandler.END
+
+
+class FileHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        file = utils.requests_saver.get_file()
+        await update.message.reply_document(file)
+
+
 def link_conversation() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
@@ -461,7 +511,9 @@ class AdminHandler(BaseHandler):
         if update.message.from_user.id not in constant.ADMINS:
             return
         text = '/list - список необработанных запросов\n' \
-               '/process - обработать запросы\n'
+               '/process - обработать запросы\n' \
+               '/send - отправить сообщение по id\n' \
+               '/file - скачать файл с запросами'
         await update.message.reply_text(text)
 
 
@@ -589,6 +641,30 @@ def low_cost_handler() -> tg_ext.ConversationHandler:
     return conversation_handler
 
 
+def send_message_conversation() -> tg_ext.ConversationHandler:
+    conversation_handler = tg_ext.ConversationHandler(
+
+        entry_points=[tg_ext.CommandHandler("send", StartWriteHandler())],
+
+        states={
+
+            constant.ID_WRITE: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      IdWriteHandler())],
+            constant.TEXT_WRITE: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      TextWriteHandler())
+            ]
+
+        },
+
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+
+    )
+
+    return conversation_handler
+
+
 def setup_handlers(application: tg_ext.Application, created_session: client.SearchSession) -> None:
     global session
     session = created_session
@@ -603,6 +679,7 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
     application.add_handler(consult_handler())
     application.add_handler(link_conversation())
     application.add_handler(low_cost_handler())
+    application.add_handler(send_message_conversation())
 
     application.add_handler(tg_ext.CommandHandler('admin', AdminHandler()))
     application.add_handler(tg_ext.CommandHandler('id', IdHandler()))
@@ -612,6 +689,7 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
     application.add_handler(
         tg_ext.MessageHandler(tg_ext.filters.SUCCESSFUL_PAYMENT, SuccessPayHandler())
     )
+    application.add_handler(tg_ext.CommandHandler('file', FileHandler()))
     # application.add_handler(
     #     tg_ext.MessageHandler(
     #         tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND, EchoHandler()

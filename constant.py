@@ -19,7 +19,10 @@ CONSULT_CHOOSE = 7
 SLOT_CHOOSE = 8
 LINK_INSERT = 9
 
-ADMINS = [464192926, 771815950, 233005351]
+ID_WRITE = 10
+TEXT_WRITE = 11
+
+ADMINS = [464192926, 771815950]
 
 MENU = ['Узнать КС по кадастровому номеру',
         'Узнать КС по адресу',

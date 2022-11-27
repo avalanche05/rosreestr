@@ -55,7 +55,7 @@ class SearchSession:
         else:
             return False
 
-    def get_info(self, cadastral_number: str) -> str:
+    def get_info(self, cadastral_number: str) -> object.Object:
         if not self.is_captcha_correct:
             raise SyntaxError('Перед чем использовать этот метод пройдите каптчу.')
 
@@ -71,4 +71,4 @@ class SearchSession:
             raise ConnectionError('Кадастровый номер неправильный')
         print(response.json())
         obj = object.get_object(response.json())
-        return str(obj)
+        return obj
