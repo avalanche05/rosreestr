@@ -1,5 +1,6 @@
 from copy import copy
 
+import client
 import data.requests
 import data.users
 import utils.user
@@ -93,3 +94,8 @@ def close_request_get_info(request_id) -> str:
     db_sess.close()
 
     return result
+
+
+def list_by_address(address: str, session: client.SearchSession) -> list:
+    addresses = [(t['cadnum'], t['full_name']) for t in session.get_list_by(address)]
+    return addresses

@@ -17,6 +17,7 @@ HEADERS = {
 GET_CAPTCHA_LINK = 'https://lk.rosreestr.ru/account-back/captcha.png'
 CHECK_CAPTCHA_LINK = 'https://lk.rosreestr.ru/account-back/captcha/'
 GET_INFO_LINK = 'https://lk.rosreestr.ru/account-back/on'
+GET_LIST_BY_ADDRESS_LINK = 'https://lk.rosreestr.ru/account-back/address/search' # ?term=%D0%BA%D0%B0%D0%BD%D0%B0%D1%88+%D1%87%D0%B8%D1%81%D1%82%D1%8B%D0%B5+%D0%BF%D1%80%D1%83%D0%B4%D1%8B&objType=all'
 
 
 class SearchSession:
@@ -72,3 +73,12 @@ class SearchSession:
         print(response.json())
         obj = object.get_object(response.json())
         return obj
+
+    def get_list_by(self, address: str) -> list:
+        params = {
+            'term': address,
+            'objType': 'all'
+        }
+        response = self.session.get(GET_LIST_BY_ADDRESS_LINK, params=params)
+        return response.json()
+

@@ -114,10 +114,6 @@ class AddressHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         tg_id = update.message.from_user.id
-        if not utils.user.check_paid(tg_id):
-            await update.message.reply_text(self.messages.address_count_error(),
-                                            reply_markup=constant.MENU_MARKUP)
-            return tg_ext.ConversationHandler.END
 
         await update.message.reply_text(self.messages.address(),
                                         reply_markup=tg.ReplyKeyboardRemove(), parse_mode="html")
@@ -129,15 +125,53 @@ class AddressGetHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         address = update.message.text
-        tg_id = update.message.from_user.id
-        utils.request.create_request(tg_id, address)
         utils.requests_saver.save_request(update.message.from_user, address)
-        await update.message.reply_text(self.messages.address_success(),
-                                        reply_markup=constant.MENU_MARKUP)
-        for admin_id in constant.ADMINS:
-            await context.bot.send_message(chat_id=admin_id,
-                                           text=f"Появился новый запрос:\n{address}")
-        return tg_ext.ConversationHandler.END
+
+        valid_list = utils.request.list_by_address(address, session)
+
+        if not valid_list:
+            await update.message.reply_text('Введённый адрес не найден. Введите адрес заново.')
+            return constant.ADDRESS_INSERT
+
+        context.user_data['valid_list'] = valid_list
+
+        addresses_markup = [[t[1]] for t in valid_list]
+
+        await update.message.reply_text('Выберите Ваш адрес из списка.', reply_markup=tg.ReplyKeyboardMarkup(
+            addresses_markup,
+            one_time_keyboard=True,
+            input_field_placeholder='Выберите адрес'))
+
+        return constant.ADDRESS_SELECT
+
+
+class ChooseAddressHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        chosen_address = update.message.text
+
+        valid_list = context.user_data.get('valid_list', [])
+
+        chosen_address_cadnum = -1
+
+        for cadnum, address in valid_list:
+            if chosen_address.strip().lower() == address.strip().lower():
+                chosen_address_cadnum = cadnum
+                break
+        else:
+            await update.message.reply_text('Вы выбрали адрес не из списка, пожалуйста, попробуйте заново.')
+            return tg_ext.ConversationHandler.END
+
+        context.user_data['cadastral_number'] = chosen_address_cadnum
+        sent_message = await context.bot.send_message(chat_id=update.message.chat_id,
+                                                      text=self.messages.wait(),
+                                                      reply_markup=tg.ReplyKeyboardRemove())
+        session.get_captcha()
+        print(context.user_data['cadastral_number'])
+        await update.message.reply_text(self.messages.captcha_insert())
+        await update.message.reply_photo(photo=open('captcha.png', 'rb'))
+        return constant.CAPTCHA_INSERT
 
 
 class IdHandler(BaseHandler):
@@ -553,7 +587,15 @@ def address_conversation() -> tg_ext.ConversationHandler:
 
             constant.ADDRESS_INSERT: [
                 tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
-                                      AddressGetHandler())]
+                                      AddressGetHandler())],
+            constant.ADDRESS_SELECT: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      ChooseAddressHandler())
+            ],
+            constant.CAPTCHA_INSERT: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      CaptchaHandler())
+            ]
 
         },
 
