@@ -135,10 +135,11 @@ class AddressGetHandler(BaseHandler):
 
         context.user_data['valid_list'] = valid_list
 
-        addresses_markup = [[t[1]] for t in valid_list]
+        addresses_markup = [[t[1]] for t in valid_list][:min(8, len(valid_list))]
 
         await update.message.reply_text('Выберите Ваш адрес из списка.', reply_markup=tg.ReplyKeyboardMarkup(
             addresses_markup,
+            resize_keyboard=True,
             one_time_keyboard=True,
             input_field_placeholder='Выберите адрес'))
 
@@ -570,7 +571,7 @@ def cadastral_conversation() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
 
@@ -599,7 +600,7 @@ def address_conversation() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
 
@@ -622,7 +623,7 @@ def process_handler() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
     return conversation_handler
@@ -641,7 +642,7 @@ def schedule_handler() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
     return conversation_handler
@@ -661,7 +662,7 @@ def consult_handler() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
     return conversation_handler
@@ -677,7 +678,7 @@ def low_cost_handler() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
     return conversation_handler
@@ -700,7 +701,7 @@ def send_message_conversation() -> tg_ext.ConversationHandler:
 
         },
 
-        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler())],
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
 
     )
 
