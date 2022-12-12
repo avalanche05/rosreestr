@@ -133,15 +133,19 @@ class AddressGetHandler(BaseHandler):
             await update.message.reply_text('Введённый адрес не найден. Введите адрес заново.')
             return constant.ADDRESS_INSERT
 
-        context.user_data['valid_list'] = valid_list
+        context.user_data['valid_list'] = valid_list[:10]
 
-        addresses_markup = [[t[1]] for t in valid_list][:min(8, len(valid_list))]
+        test = "Вот что удалось найти," \
+               " выберите Ваш адрес и напишите число, которое написано рядом с выбранным адресом. " \
+               "Если в списке нет Вашего адреса, попробуйте уточнить запрос.\n\n"
+        for i in range(len(valid_list)):
+            test += str(i + 1) + ". " + valid_list[i][1] + '\n'
 
-        await update.message.reply_text('Выберите Ваш адрес из списка.', reply_markup=tg.ReplyKeyboardMarkup(
-            addresses_markup,
-            resize_keyboard=True,
-            one_time_keyboard=True,
-            input_field_placeholder='Выберите адрес'))
+        try:
+            await update.message.reply_text(test, reply_markup=tg.ReplyKeyboardRemove())
+        except Exception:
+            await update.message.reply_text('Слишком общий запррос. Попробуйте уточнить поиск.')
+            return tg_ext.ConversationHandler.END
 
         return constant.ADDRESS_SELECT
 
@@ -156,10 +160,8 @@ class ChooseAddressHandler(BaseHandler):
 
         chosen_address_cadnum = -1
 
-        for cadnum, address in valid_list:
-            if chosen_address.strip().lower() == address.strip().lower():
-                chosen_address_cadnum = cadnum
-                break
+        if chosen_address.isdigit() and int(chosen_address) <= len(valid_list):
+            chosen_address_cadnum = valid_list[int(chosen_address) - 1][0]
         else:
             await update.message.reply_text('Вы выбрали адрес не из списка, пожалуйста, попробуйте заново.')
             return tg_ext.ConversationHandler.END
