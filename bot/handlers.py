@@ -163,7 +163,8 @@ class ChooseAddressHandler(BaseHandler):
         if chosen_address.isdigit() and int(chosen_address) <= len(valid_list):
             chosen_address_cadnum = valid_list[int(chosen_address) - 1][0]
         else:
-            await update.message.reply_text('Вы выбрали адрес не из списка, пожалуйста, попробуйте заново.')
+            await update.message.reply_text('Вы выбрали адрес не из списка, пожалуйста, попробуйте заново.',
+                                            reply_markup=constant.MENU_MARKUP)
             return tg_ext.ConversationHandler.END
 
         context.user_data['cadastral_number'] = chosen_address_cadnum
