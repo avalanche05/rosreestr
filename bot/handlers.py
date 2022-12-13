@@ -133,18 +133,28 @@ class AddressGetHandler(BaseHandler):
             await update.message.reply_text('Введённый адрес не найден. Введите адрес заново.')
             return constant.ADDRESS_INSERT
 
-        context.user_data['valid_list'] = valid_list[:10]
+        context.user_data['valid_list'] = valid_list[:9]
+        count = len(valid_list[:9])
+        markup = []
+        for i in range(count):
+            if i % 3 == 0:
+                markup.append([])
+            markup[-1].append(i + 1)
 
         test = "Вот что удалось найти," \
-               " выберите Ваш адрес и напишите число, которое написано рядом с выбранным адресом. " \
-               "Если в списке нет Вашего адреса, попробуйте уточнить запрос.\n\n"
-        for i in range(len(valid_list)):
+               "Выберите номер, рядом с которым указан Ваш адрес.\n\n"
+        for i in range(len(valid_list[:9])):
             test += str(i + 1) + ". " + valid_list[i][1] + '\n'
 
         try:
-            await update.message.reply_text(test, reply_markup=tg.ReplyKeyboardRemove())
+            await update.message.reply_text(test, reply_markup=tg.ReplyKeyboardMarkup(
+                markup,
+                one_time_keyboard=True,
+                resize_keyboard=True,
+                input_field_placeholder='Выберите номер'))
         except Exception:
-            await update.message.reply_text('Слишком общий запррос. Попробуйте уточнить поиск.')
+            await update.message.reply_text('Слишком общий запрос. Попробуйте уточнить поиск.',
+                                            reply_markup=constant.MENU_MARKUP)
             return tg_ext.ConversationHandler.END
 
         return constant.ADDRESS_SELECT
