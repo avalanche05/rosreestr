@@ -574,9 +574,7 @@ class AdminHandler(BaseHandler):
     ) -> None:
         if update.message.from_user.id not in constant.ADMINS:
             return
-        text = '/list - список необработанных запросов\n' \
-               '/process - обработать запросы\n' \
-               '/send - отправить сообщение по id\n' \
+        text = '/send - отправить сообщение по id\n' \
                '/file - скачать файл с запросами'
         await update.message.reply_text(text)
 
