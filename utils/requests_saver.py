@@ -31,5 +31,5 @@ def save_request(user: tg.User, address):
 
 
 def get_file() -> bytes:
-    file = open('db/requests.txt', 'rb')
+    file = open('db/requests.xlsx', 'rb')
     return file
