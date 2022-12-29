@@ -1,17 +1,23 @@
 import _io
 import datetime
 import telegram as tg
-
+from openpyxl import Workbook, load_workbook
 
 def add_new_note(date: datetime.datetime, name: str, address: str, tg_id: str, tg_handle: str):
-    note = date.strftime('%d.%m.%Y') + ' ' + \
-           name + ' ' + \
-           address + ' ' + \
-           tg_id + ' ' + \
-           tg_handle + '\n'
+    # note = date.strftime('%d.%m.%Y') + ' ' + \
+    #        name + ' ' + \
+    #        address + ' ' + \
+    #        tg_id + ' ' + \
+    #        tg_handle + '\n'
+    #
+    # with open('db/requests.txt', 'a') as file:
+    #     file.write(note)
 
-    with open('db/requests.txt', 'a') as file:
-        file.write(note)
+    wb = load_workbook('db/requests.xlsx')
+    ws = wb.active
+
+    ws.append([date.strftime('%d.%m.%Y'), name, address, tg_id, tg_handle])
+    wb.save('db/requests.xlsx')
 
 
 def save_request(user: tg.User, address):

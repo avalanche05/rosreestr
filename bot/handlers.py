@@ -125,7 +125,7 @@ class AddressGetHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
         address = update.message.text
-        utils.requests_saver.save_request(update.message.from_user, address)
+        # utils.requests_saver.save_request(update.message.from_user, address)
 
         valid_list = utils.request.list_by_address(address, session)
 
@@ -475,11 +475,28 @@ class CadastralPriceHandler(BaseHandler):
     async def handle(
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
-        await update.message.reply_text(
-            text="<a href='https://t.me/d_zhelnin/62'>Гайд как снизить кадастровую стоимость самостоятельно.</a>",
-            parse_mode="html",
-            reply_markup=constant.MENU_MARKUP)
-        return tg_ext.ConversationHandler.END
+
+        chat_id = '@d_zhelnin'
+
+        chanel = await context.bot.get_chat(chat_id)
+        chanel: tg.Chat
+
+        chat_member = await chanel.get_member(user_id=update.message.from_user.id)
+
+        if chat_member.status != tg.ChatMember.LEFT:
+
+            await update.message.reply_text(
+                text="<a href='https://t.me/d_zhelnin/62'>Гайд как снизить кадастровую стоимость самостоятельно.</a>",
+                parse_mode="html",
+                reply_markup=constant.MENU_MARKUP)
+            return tg_ext.ConversationHandler.END
+        else:
+            await update.message.reply_text(
+                text=f'Чтобы получить гайд "Как снизить кадастровую стоимость самостоятельно"'
+                     f' необходимо подписаться на канал {chat_id} и попробовать ещё раз.',
+                parse_mode="markdown",
+                reply_markup=constant.MENU_MARKUP)
+            return tg_ext.ConversationHandler.END
 
 
 class StartWriteHandler(BaseHandler):
