@@ -476,7 +476,7 @@ class CadastralPriceHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
 
-        chat_id = '@d_zhelnin'
+        chat_id = '@ilin_test'
 
         chanel = await context.bot.get_chat(chat_id)
         chanel: tg.Chat
@@ -494,7 +494,6 @@ class CadastralPriceHandler(BaseHandler):
             await update.message.reply_text(
                 text=f'Чтобы получить гайд "Как снизить кадастровую стоимость самостоятельно"'
                      f' необходимо подписаться на канал {chat_id} и попробовать ещё раз.',
-                parse_mode="markdown",
                 reply_markup=constant.MENU_MARKUP)
             return tg_ext.ConversationHandler.END
 
