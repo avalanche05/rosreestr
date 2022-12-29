@@ -476,7 +476,7 @@ class CadastralPriceHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
 
-        chat_id = '@ilin_test'
+        chat_id = '@d_zhelnin'
 
         chanel = await context.bot.get_chat(chat_id)
         chanel: tg.Chat
