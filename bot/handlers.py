@@ -492,8 +492,10 @@ class CadastralPriceHandler(BaseHandler):
             return tg_ext.ConversationHandler.END
         else:
             await update.message.reply_text(
-                text=f'Чтобы получить гайд "Как снизить кадастровую стоимость самостоятельно"'
-                     f' необходимо подписаться на канал {chat_id} и попробовать ещё раз.',
+                text='Упс😳 Смотрите, чтобы получить гайд,'
+                     ' надо подписаться на канал '
+                     '«[Дмитрий Желнин о налогах на недвижимость](https://t.me/d_zhelnin)» и попробовать еще раз',
+                parse_mode="markdown",
                 reply_markup=constant.MENU_MARKUP)
             return tg_ext.ConversationHandler.END
 
@@ -698,7 +700,7 @@ def consult_handler() -> tg_ext.ConversationHandler:
 def low_cost_handler() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
-        entry_points=[tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[2]}$"),
+        entry_points=[tg_ext.MessageHandler(tg_ext.filters.Regex(f"^{constant.MENU[2][:-len(' (гайд за подписку)')]}"),
                                             CadastralPriceHandler())],
 
         states={
