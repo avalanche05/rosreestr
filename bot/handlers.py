@@ -546,6 +546,65 @@ class FileHandler(BaseHandler):
         await update.message.reply_document(file)
 
 
+class StartBulkSend(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message.from_user.id not in constant.ADMINS:
+            return tg_ext.ConversationHandler.END
+        await update.message.reply_text('Введите текст который нужно отправить всем пользователям.')
+        return constant.GET_BULK_TEXT
+
+
+class GetBulkText(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        bulk_text = update.message.text
+        context.user_data['bulk_text'] = bulk_text
+        await update.message.reply_text(
+            "Бот отправит по всем пользователям сообщение следующего содержания")
+        await update.message.reply_text(bulk_text)
+        await update.message.reply_text('Вы уверены что хотите разослать это сообщение по всем пользователям?',
+                                        reply_markup=tg.ReplyKeyboardMarkup(
+                                            [['да', 'нет']],
+                                            one_time_keyboard=True,
+                                            input_field_placeholder='выберите')
+                                        )
+        return constant.CHECK_SEND
+
+
+class SendBulk(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        ans = update.message.text
+        if ans.lower().strip() != 'да':
+            await update.message.reply_text('Отправка отменена.', reply_markup=constant.MENU_MARKUP)
+            return tg_ext.ConversationHandler.END
+
+        await update.message.reply_text('Идет загрузка...')
+        bulk_text = context.user_data['bulk_text']
+        from utils.excel import get_all_user_ids
+        all_ids = list(set(get_all_user_ids()))
+        print(all_ids)
+        await update.message.reply_text(f'Сообщения будут разосланы {len(all_ids)} пользователям')
+
+        err_cnt = 0
+        for user_id in all_ids:
+            try:
+                await context.bot.send_message(chat_id=user_id,
+                                               text=bulk_text)
+            except Exception as e:
+                err_cnt += 1
+
+        if err_cnt > 0:
+            await update.message.reply_text(f'Не получилось отправить {err_cnt} пользователям')
+
+        await update.message.reply_text('Сообщения отправлены!', reply_markup=constant.MENU_MARKUP)
+        return tg_ext.ConversationHandler.END
+
+
 def link_conversation() -> tg_ext.ConversationHandler:
     conversation_handler = tg_ext.ConversationHandler(
 
@@ -577,7 +636,8 @@ class AdminHandler(BaseHandler):
         if update.message.from_user.id not in constant.ADMINS:
             return
         text = '/send - отправить сообщение по id\n' \
-               '/file - скачать файл с запросами'
+               '/file - скачать файл с запросами\n' \
+               '/bulk - разослать сообщение по всем пользователям'
         await update.message.reply_text(text)
 
 
@@ -596,6 +656,31 @@ def cadastral_conversation() -> tg_ext.ConversationHandler:
             constant.CAPTCHA_INSERT: [
                 tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
                                       CaptchaHandler())
+            ]
+
+        },
+
+        fallbacks=[tg_ext.CommandHandler("cancel", CancelHandler()), tg_ext.CommandHandler('start', StartHandler())],
+
+    )
+
+    return conversation_handler
+
+
+def bulk_send_conversation() -> tg_ext.ConversationHandler:
+    conversation_handler = tg_ext.ConversationHandler(
+
+        entry_points=[
+            tg_ext.CommandHandler("bulk", StartBulkSend())],
+
+        states={
+
+            constant.GET_BULK_TEXT: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      GetBulkText())],
+            constant.CHECK_SEND: [
+                tg_ext.MessageHandler(tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND,
+                                      SendBulk())
             ]
 
         },
@@ -752,6 +837,7 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
     application.add_handler(link_conversation())
     application.add_handler(low_cost_handler())
     application.add_handler(send_message_conversation())
+    application.add_handler(bulk_send_conversation())
 
     application.add_handler(tg_ext.CommandHandler('admin', AdminHandler()))
     application.add_handler(tg_ext.CommandHandler('id', IdHandler()))

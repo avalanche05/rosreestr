@@ -24,6 +24,9 @@ TEXT_WRITE = 11
 
 ADDRESS_SELECT = 12
 
+GET_BULK_TEXT = 13
+CHECK_SEND = 14
+
 ADMINS = [464192926, 233005351, 771815950]
 
 MENU = ['Узнать КС по кадастровому номеру',
