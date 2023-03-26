@@ -19,6 +19,8 @@ import utils.requests_saver
 session = None
 session: client.SearchSession
 
+CHECK_SUBSCRIBE = "checksubscribe"
+
 
 class BaseHandler(abc.ABC):
     def __init__(self) -> None:
@@ -27,9 +29,34 @@ class BaseHandler(abc.ABC):
     async def __call__(
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> None:
+        chat_id = '@d_zhelnin'
+
+        chanel = await context.bot.get_chat(chat_id)
+        chanel: tg.Chat
+
+        chat_member = await chanel.get_member(user_id=update.effective_user.id)
+
+        if not isinstance(self, StartHandler) and chat_member.status == tg.ChatMember.LEFT:
+            await self.subscribe_handle(update, context)
+            return
         self.user = update.effective_user
         self.messages = messages.get_messages(self.user)
         return await self.handle(update, context)
+
+    async def subscribe_handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        keyboard = [
+            [
+                tg.InlineKeyboardButton("Подписался", callback_data=CHECK_SUBSCRIBE)
+            ]
+        ]
+        reply_markup = tg.InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=update.effective_user.id,
+                                       text="""Упс! Что-то пошло не так 🤷‍♂️ 
+Подпишись, пожалуйста, на канал @d_zhelnin""",
+                                       reply_markup=reply_markup)
+        return tg_ext.ConversationHandler.END
 
     @abc.abstractmethod
     async def handle(
@@ -43,8 +70,15 @@ class StartHandler(BaseHandler):
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> None:
         utils.user.register_user(update.message.from_user.id)
-        await update.message.reply_text(self.messages.start(), reply_markup=constant.MENU_MARKUP,
-                                        parse_mode='markdown')
+        name = update.message.from_user.first_name
+        name = name if name else "Уважаемый"
+        keyboard = [
+            [
+                tg.InlineKeyboardButton("Подписался", callback_data=CHECK_SUBSCRIBE)
+            ]
+        ]
+        reply_markup = tg.InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(self.messages.start(name), reply_markup=reply_markup)
 
 
 class HelpHandler(BaseHandler):
@@ -475,29 +509,11 @@ class CadastralPriceHandler(BaseHandler):
     async def handle(
             self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
     ) -> int:
-
-        chat_id = '@d_zhelnin'
-
-        chanel = await context.bot.get_chat(chat_id)
-        chanel: tg.Chat
-
-        chat_member = await chanel.get_member(user_id=update.message.from_user.id)
-
-        if chat_member.status != tg.ChatMember.LEFT:
-
-            await update.message.reply_text(
-                text="<a href='https://t.me/d_zhelnin/62'>Гайд как снизить кадастровую стоимость самостоятельно.</a>",
-                parse_mode="html",
-                reply_markup=constant.MENU_MARKUP)
-            return tg_ext.ConversationHandler.END
-        else:
-            await update.message.reply_text(
-                text='Упс😳 Смотрите, чтобы получить гайд,'
-                     ' надо подписаться на канал '
-                     '«[Дмитрий Желнин о налогах на недвижимость](https://t.me/d_zhelnin)» и попробовать еще раз',
-                parse_mode="markdown",
-                reply_markup=constant.MENU_MARKUP)
-            return tg_ext.ConversationHandler.END
+        await update.message.reply_text(
+            text="<a href='https://t.me/d_zhelnin/62'>Гайд как снизить кадастровую стоимость самостоятельно.</a>",
+            parse_mode="html",
+            reply_markup=constant.MENU_MARKUP)
+        return tg_ext.ConversationHandler.END
 
 
 class StartWriteHandler(BaseHandler):
@@ -603,6 +619,41 @@ class SendBulk(BaseHandler):
 
         await update.message.reply_text('Сообщения отправлены!', reply_markup=constant.MENU_MARKUP)
         return tg_ext.ConversationHandler.END
+
+
+class CheckSubscribeHandler(BaseHandler):
+    async def handle(
+            self, update: tg.Update, context: tg_ext.ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        chat_id = '@d_zhelnin'
+
+        chanel = await context.bot.get_chat(chat_id)
+        chanel: tg.Chat
+
+        chat_member = await chanel.get_member(user_id=update.effective_user.id)
+
+        if chat_member.status != tg.ChatMember.LEFT:
+
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text="Спасибо! Теперь можно пользоваться ботом. Выбери функцию в меню.",
+                reply_markup=constant.MENU_MARKUP)
+            return tg_ext.ConversationHandler.END
+        else:
+            keyboard = [
+                [
+                    tg.InlineKeyboardButton("Подписался", callback_data=CHECK_SUBSCRIBE)
+                ]
+            ]
+            reply_markup = tg.InlineKeyboardMarkup(keyboard)
+
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text="""Упс! Что-то пошло не так 🤷‍♂️ 
+Подпишись, пожалуйста, на канал @d_zhelnin""",
+                parse_mode="markdown",
+                reply_markup=reply_markup)
+            return tg_ext.ConversationHandler.END
 
 
 def link_conversation() -> tg_ext.ConversationHandler:
@@ -848,6 +899,8 @@ def setup_handlers(application: tg_ext.Application, created_session: client.Sear
         tg_ext.MessageHandler(tg_ext.filters.SUCCESSFUL_PAYMENT, SuccessPayHandler())
     )
     application.add_handler(tg_ext.CommandHandler('file', FileHandler()))
+
+    application.add_handler(tg_ext.CallbackQueryHandler(CheckSubscribeHandler(), pattern="^" + CHECK_SUBSCRIBE + "$"))
     # application.add_handler(
     #     tg_ext.MessageHandler(
     #         tg_ext.filters.TEXT & ~tg_ext.filters.COMMAND, EchoHandler()

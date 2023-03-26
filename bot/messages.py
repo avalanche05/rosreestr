@@ -6,7 +6,7 @@ import telegram.ext as tg_ext
 
 class BaseMessages(abc.ABC):
     @abc.abstractmethod
-    def start(self) -> str:
+    def start(self, name: str) -> str:
         raise NotImplemented
 
     @abc.abstractmethod
@@ -67,11 +67,12 @@ class BaseMessages(abc.ABC):
 
 
 class RegularUser(BaseMessages):
-    def start(self) -> str:
-        return """Что могу для Вас сделать:
-1️⃣ узнать кадастровую стоимость по кадастровому номеру
-2️⃣ узнать кадастровую стоимость по адресу
-3️⃣ рассказать, как снизить кадастровую стоимость самостоятельно."""
+    def start(self, name: str) -> str:
+        return f"""Привет, {name}! Я бот «Кадастровая стоимость»!
+
+Я умею находить кадастровую стоимость по кадастровому номеру или адресу объекта. 
+
+Чтобы начать пользоваться, подпишись, пожалуйста, на канал моего создателя:  @d_zhelnin"""
 
     def help(self) -> str:
         return 'Вам нужно приобрести подписку'
